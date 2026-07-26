@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+logs/
+*.log
+.cache/
+.pytest_cache/
+*.tmp
+*.swp

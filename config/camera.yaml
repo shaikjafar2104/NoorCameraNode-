@@ -1,0 +1,14 @@
+camera:
+  index: 0
+
+video:
+  width: 1280
+  height: 720
+  fps: 15
+
+server:
+  host: 0.0.0.0
+  port: 8000
+
+system:
+  log_level: INFO

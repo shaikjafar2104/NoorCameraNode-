@@ -1,0 +1,177 @@
+"""
+============================================================
+Project : Noor AI Home Platform
+Module  : Camera Service
+Version : 0.6.0
+============================================================
+"""
+
+import threading
+import time
+import cv2
+
+from shared.logger import logger
+from shared.config_manager import load_config
+from shared.frame_buffer import frame_buffer
+from shared.stats_manager import stats_manager
+from shared.camera_state import camera_state
+
+
+class CameraService:
+
+    def __init__(self):
+
+        config = load_config()
+
+        self.camera_index = config["camera"]["index"]
+        self.width = config["video"]["width"]
+        self.height = config["video"]["height"]
+        self.target_fps = config["video"]["fps"]
+
+        self.cap = None
+        self.running = False
+        self.thread = None
+
+        self.frame_count = 0
+        self.start_time = time.time()
+
+    # ----------------------------------------------------
+
+    def connect(self):
+
+        logger.info("=" * 60)
+        logger.info("Noor Camera Service v0.6")
+        logger.info("=" * 60)
+
+        self.cap = cv2.VideoCapture(
+            self.camera_index,
+            cv2.CAP_V4L2
+        )
+
+        if not self.cap.isOpened():
+
+            logger.error("Cannot Open Camera")
+            stats_manager.set_camera(False)
+            camera_state.connected = False
+            return False
+
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+        self.cap.set(cv2.CAP_PROP_FPS, self.target_fps)
+
+        time.sleep(2)
+
+        actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        logger.info("Camera Connected")
+        logger.info(f"Resolution : {actual_width} x {actual_height}")
+        logger.info(f"FPS : {self.cap.get(cv2.CAP_PROP_FPS)}")
+
+        # Update shared state
+        stats_manager.set_camera(True)
+
+        camera_state.connected = True
+        camera_state.width = actual_width
+        camera_state.height = actual_height
+
+        return True
+
+    # ----------------------------------------------------
+
+    def capture_loop(self):
+
+        logger.info("Capture Thread Started")
+
+        while self.running:
+
+            success, frame = self.cap.read()
+
+            if not success:
+                continue
+
+            frame_buffer.update(frame)
+
+            self.frame_count += 1
+            stats_manager.add_frame()
+            camera_state.frames += 1
+
+            elapsed = time.time() - self.start_time
+
+            if elapsed >= 5:
+
+                fps = self.frame_count / elapsed
+
+                logger.info(f"Average FPS : {fps:.2f}")
+
+                stats_manager.update_fps(fps)
+                camera_state.fps = round(fps, 2)
+
+                self.frame_count = 0
+                self.start_time = time.time()
+
+        logger.info("Capture Thread Stopped")
+
+    # ----------------------------------------------------
+
+    def start(self):
+
+        if not self.connect():
+            return False
+
+        self.running = True
+
+        self.thread = threading.Thread(
+            target=self.capture_loop,
+            daemon=True
+        )
+
+        self.thread.start()
+
+        logger.info("Camera Service Started")
+
+        return True
+
+    # ----------------------------------------------------
+
+    def stop(self):
+
+        self.running = False
+
+        if self.thread:
+            self.thread.join(timeout=2)
+
+        if self.cap:
+            self.cap.release()
+
+        stats_manager.set_camera(False)
+        camera_state.connected = False
+
+        logger.info("Camera Released")
+
+    # ----------------------------------------------------
+
+    def get_frame(self):
+        return frame_buffer.get()
+
+
+camera_service = CameraService()
+
+# --------------------------------------------------------
+
+if __name__ == "__main__":
+
+    try:
+
+        if camera_service.start():
+
+            while True:
+                time.sleep(1)
+
+    except KeyboardInterrupt:
+
+        logger.info("Stopping Service")
+
+    finally:
+
+        camera_service.stop()
