@@ -8,3 +8,13 @@ logs/
 .pytest_cache/
 *.tmp
 *.swp
+
+# NoorCameraNode local/runtime
+.venv/
+.env
+.env.*
+*token*
+*.before-*
+*.bak
+*~
+ystemctl*
