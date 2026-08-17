@@ -1,20 +1,30 @@
+# Pi audio node token
+*token*
+*.token
+
+# Environment files
+.env*
+
+# Python
 venv/
 __pycache__/
 *.pyc
 *.pyo
+
+# Logs
 logs/
 *.log
-.cache/
-.pytest_cache/
-*.tmp
-*.swp
 
-# NoorCameraNode local/runtime
-.venv/
-.env
-.env.*
-*token*
+# Database / runtime data
+*.db
+*.db-wal
+*.db-shm
+
+# Backup files
 *.before-*
-*.bak
 *~
-ystemctl*
+*.bak
+*.backup
+
+# Accidental shell-command files
+nohup.out

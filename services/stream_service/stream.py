@@ -102,12 +102,7 @@ a{{
 # ==========================================================
 @app.get("/health")
 def health():
-    return {
-        "status": "online" if camera_state.connected else "offline",
-        "camera_connected": camera_state.connected,
-        "uptime_seconds": round(time.time() - START_TIME, 1),
-        "health_service": health_service.get_status()
-    }
+    return health_service.get_status()
 
 
 # ==========================================================
